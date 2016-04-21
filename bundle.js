@@ -54,6 +54,7 @@
 	
 	var SessionStore = __webpack_require__(178);
 	var DictionaryStore = __webpack_require__(196);
+	var WordStore = __webpack_require__(197);
 	
 	var MyComponent = React.createClass({
 	  displayName: 'MyComponent',
@@ -67,7 +68,9 @@
 	      dictionary: {},
 	      possibleWords: [],
 	      existLetter: [],
-	      word: ""
+	      guessWord: [],
+	      guessLetter: "",
+	      result: []
 	    };
 	  },
 	
@@ -79,14 +82,21 @@
 	    this.setState({ dictionary: DictionaryStore.all() });
 	  },
 	
+	  updateWord: function () {
+	    this.setState({ guessWord: WordStore.all() });
+	    this.setState({ result: WordStore.result() });
+	  },
+	
 	  componentDidMount: function () {
 	    this.token1 = SessionStore.addListener(this.updateSession);
 	    this.token2 = DictionaryStore.addListener(this.updateDictionary);
+	    this.token3 = WordStore.addListener(this.updateWord);
 	  },
 	
 	  componentWillUnmount: function () {
 	    this.token1.remove();
 	    this.token2.remove();
+	    this.token3.remove();
 	  },
 	
 	  clickStart: function (e) {
@@ -100,22 +110,32 @@
 	    WordActions.fetchWord(this.state.session);
 	  },
 	
+	  clickGuess: function (e) {
+	    e.preventDefault();
+	    WordActions.guessWord(this.state.session, this.state.guessLetter);
+	  },
+	
+	  clickResult: function (e) {
+	    e.preventDefault();
+	    WordActions.fetchResult(this.state.session);
+	  },
+	
+	  clickSubmit: function (e) {
+	    e.preventDefault();
+	    WordActions.gameSubmit(this.state.session);
+	  },
+	
 	  render: function () {
 	    return React.createElement(
 	      'div',
 	      null,
-	      React.createElement('input', { placeholder: 'Email', type: 'text', value: this.state.email }),
+	      React.createElement('input', { placeholder: 'Email', type: 'text', valueLink: this.linkState('email') }),
 	      React.createElement(
 	        'button',
 	        { onClick: this.clickStart },
 	        'Start'
 	      ),
 	      React.createElement('br', null),
-	      React.createElement(
-	        'button',
-	        { onClick: this.clickGetAWord },
-	        'Get A Word'
-	      ),
 	      React.createElement(
 	        'h2',
 	        null,
@@ -125,14 +145,98 @@
 	      React.createElement(
 	        'h2',
 	        null,
-	        'Word: ',
-	        this.state.word
+	        '----------------------------------------------'
 	      ),
 	      React.createElement(
-	        'h3',
+	        'button',
+	        { onClick: this.clickGetAWord },
+	        'Get A Word'
+	      ),
+	      React.createElement(
+	        'h2',
 	        null,
-	        'Possible Words: ',
+	        'Word: ',
+	        this.state.guessWord[0]
+	      ),
+	      React.createElement(
+	        'h2',
+	        null,
+	        'Total Word Count: ',
+	        this.state.guessWord[1]
+	      ),
+	      React.createElement(
+	        'h2',
+	        null,
+	        'Wrong Guess Count of Current Word: ',
+	        this.state.guessWord[2]
+	      ),
+	      React.createElement(
+	        'h2',
+	        null,
+	        'Possible Words Count: ',
 	        this.state.possibleWords.length
+	      ),
+	      React.createElement(
+	        'h2',
+	        null,
+	        '----------------------------------------------'
+	      ),
+	      React.createElement('input', { placeholder: 'Guess A letter', type: 'text', valueLink: this.linkState('guessLetter') }),
+	      React.createElement(
+	        'button',
+	        { onClick: this.clickGuess },
+	        'Guess'
+	      ),
+	      React.createElement('br', null),
+	      React.createElement(
+	        'h2',
+	        null,
+	        '----------------------------------------------'
+	      ),
+	      React.createElement(
+	        'button',
+	        { onClick: this.clickResult },
+	        'Result'
+	      ),
+	      React.createElement('br', null),
+	      React.createElement(
+	        'h2',
+	        null,
+	        'Total Word Count: ',
+	        this.state.result[0]
+	      ),
+	      React.createElement(
+	        'h2',
+	        null,
+	        'Correct Word Count: ',
+	        this.state.result[1]
+	      ),
+	      React.createElement(
+	        'h2',
+	        null,
+	        'Total Wrong Guess Count: ',
+	        this.state.result[2]
+	      ),
+	      React.createElement(
+	        'h2',
+	        null,
+	        'Score: ',
+	        this.state.result[3]
+	      ),
+	      React.createElement(
+	        'h2',
+	        null,
+	        '----------------------------------------------'
+	      ),
+	      React.createElement(
+	        'button',
+	        { onClick: this.clickSubmit },
+	        'Submit'
+	      ),
+	      React.createElement(
+	        'h2',
+	        null,
+	        '----------------------------------------------'
 	      )
 	    );
 	  }
@@ -20711,7 +20815,69 @@
 	        console.log(response.data);
 	        receiveWord(response.data.word);
 	        receiveTotalWordCount(response.data.totalWordCount);
-	        receiveWrongGuessCountOfCurrentWord(respons.data.wrongGuessCountOfCurrentWord);
+	        receiveWrongGuessCountOfCurrentWord(response.data.wrongGuessCountOfCurrentWord);
+	      },
+	      error: function (response) {
+	        console.log(response);
+	      }
+	    });
+	  },
+	
+	  guessWord: function (session, letter, receiveWord, receiveTotalWordCount, receiveWrongGuessCountOfCurrentWord) {
+	    $.ajax({
+	      url: 'https://strikingly-hangman.herokuapp.com/game/on',
+	      type: 'POST',
+	      headers: {
+	        "content-type": "application/json"
+	      },
+	      dataType: 'json',
+	      data: "{\n    \"sessionId\": " + "\"" + session + "\"" + ",\n    \"action\" : \"guessWord\",\n    \"guess\": " + "\"" + letter + "\"" + "\n}",
+	      success: function (response) {
+	        console.log(response.data);
+	        receiveWord(response.data.word);
+	        receiveTotalWordCount(response.data.totalWordCount);
+	        receiveWrongGuessCountOfCurrentWord(response.data.wrongGuessCountOfCurrentWord);
+	      },
+	      error: function (response) {
+	        console.log(response);
+	      }
+	    });
+	  },
+	
+	  fetchResult: function (session, receiveTotalWordCountResult, receiveCorrectWordCountthis, receiveTotalWrongGuessCount, receiveScore) {
+	    $.ajax({
+	      url: 'https://strikingly-hangman.herokuapp.com/game/on',
+	      type: 'POST',
+	      headers: {
+	        "content-type": "application/json"
+	      },
+	      dataType: 'json',
+	      data: "{\n    \"sessionId\": " + "\"" + session + "\"" + ",\n    \"action\" : \"getResult\"\n}",
+	      success: function (response) {
+	        console.log(response.data);
+	        receiveTotalWordCountResult(response.data.totalWordCount);
+	        receiveCorrectWordCountthis(response.data.correctWordCount);
+	        receiveTotalWrongGuessCount(response.data.totalWrongGuessCount);
+	        receiveScore(response.data.score);
+	      },
+	      error: function (response) {
+	        console.log(response);
+	      }
+	    });
+	  },
+	
+	  gameSubmit: function (session) {
+	    $.ajax({
+	      url: 'https://strikingly-hangman.herokuapp.com/game/on',
+	      type: 'POST',
+	      headers: {
+	        "content-type": "application/json"
+	      },
+	      dataType: 'json',
+	      data: "{\n    \"sessionId\": " + "\"" + session + "\"" + ",\n    \"action\" : \"submitResult\"\n}",
+	      success: function (response) {
+	        console.log(response.message);
+	        console.log(response.data);
 	      },
 	      error: function (response) {
 	        console.log(response);
@@ -20719,7 +20885,6 @@
 	    });
 	  }
 	};
-	
 	module.exports = ApiUtil;
 
 /***/ },
@@ -20787,8 +20952,48 @@
 	    });
 	  },
 	
+	  receiveTotalWordCountResult: function (totalWordCountResult) {
+	    AppDispatcher.dispatch({
+	      actionType: 'RECEIVE_TOTAL_WORD_COUNT_RESULT',
+	      totalWordCountResult: totalWordCountResult
+	    });
+	  },
+	
+	  receiveCorrectWordCount: function (correctWordCount) {
+	    AppDispatcher.dispatch({
+	      actionType: 'RECEIVE_CORRECT_WORD_COUNT',
+	      correctWordCount: correctWordCount
+	    });
+	  },
+	
+	  receiveTotalWrongGuessCount: function (totalWrongGuessCount) {
+	    AppDispatcher.dispatch({
+	      actionType: 'RECEIVE_TOTAL_WRONG_GUESS_COUNT',
+	      totalWrongGuessCount: totalWrongGuessCount
+	    });
+	  },
+	
+	  receiveScore: function (score) {
+	    AppDispatcher.dispatch({
+	      actionType: 'RECEIVE_SCORE',
+	      score: score
+	    });
+	  },
+	
 	  fetchWord: function (session) {
 	    ApiUtil.fetchWord(session, this.receiveWord, this.receiveTotalWordCount, this.receiveWrongGuessCountOfCurrentWord);
+	  },
+	
+	  guessWord: function (session, letter) {
+	    ApiUtil.guessWord(session, letter, this.receiveWord, this.receiveTotalWordCount, this.receiveWrongGuessCountOfCurrentWord);
+	  },
+	
+	  fetchResult: function (session) {
+	    ApiUtil.fetchResult(session, this.receiveTotalWordCountResult, this.receiveCorrectWordCount, this.receiveTotalWrongGuessCount, this.receiveScore);
+	  },
+	
+	  gameSubmit: function (session) {
+	    ApiUtil.gameSubmit(session);
 	  }
 	};
 	
@@ -27352,6 +27557,92 @@
 	};
 	
 	module.exports = DictionaryStore;
+
+/***/ },
+/* 197 */
+/***/ function(module, exports, __webpack_require__) {
+
+	var Store = __webpack_require__(179).Store;
+	var AppDispatcher = __webpack_require__(171);
+	var WordStore = new Store(AppDispatcher);
+	var _word = "";
+	var _totalWordCount = 0;
+	var _wrongGuessCountOfCurrentWord = 0;
+	var _totalWordCountResult = 0;
+	var _correctWordCount = 0;
+	var _totalWrongGuessCount = 0;
+	var _score = 0;
+	
+	WordStore.__onDispatch = function (payload) {
+	  switch (payload.actionType) {
+	    case "RECEIVE_WORD":
+	      this.receiveWord(payload.word);
+	      WordStore.__emitChange();
+	      break;
+	    case "RECEIVE_TOTAL_WORD_COUNT":
+	      this.receiveTotalWordCount(payload.totalWordCount);
+	      WordStore.__emitChange();
+	      break;
+	    case "RECEIVE_WRONG_GUESS_COUNT_OF_CURRENT_WORD":
+	      this.receiveWrongGuessCountOfCurrentWord(payload.wrongGuessCountOfCurrentWord);
+	      WordStore.__emitChange();
+	      break;
+	    case "RECEIVE_TOTAL_WORD_COUNT_RESULT":
+	      this.receiveTotalWordCountResult(payload.totalWordCountResult);
+	      WordStore.__emitChange();
+	      break;
+	    case "RECEIVE_CORRECT_WORD_COUNT":
+	      this.receiveCorrectWordCount(payload.correctWordCount);
+	      WordStore.__emitChange();
+	      break;
+	    case "RECEIVE_TOTAL_WRONG_GUESS_COUNT":
+	      this.receiveTotalWrongGuessCount(payload.totalWrongGuessCount);
+	      WordStore.__emitChange();
+	      break;
+	    case "RECEIVE_SCORE":
+	      this.receiveScore(payload.score);
+	      WordStore.__emitChange();
+	      break;
+	  }
+	};
+	
+	WordStore.all = function () {
+	  return [_word, _totalWordCount, _wrongGuessCountOfCurrentWord];
+	};
+	
+	WordStore.result = function () {
+	  return [_totalWordCountResult, _correctWordCount, _totalWrongGuessCount, _score];
+	};
+	
+	WordStore.receiveWord = function (word) {
+	  _word = word;
+	};
+	
+	WordStore.receiveTotalWordCount = function (totalWordCount) {
+	  _totalWordCount = totalWordCount;
+	};
+	
+	WordStore.receiveWrongGuessCountOfCurrentWord = function (wrongGuessCountOfCurrentWord) {
+	  _wrongGuessCountOfCurrentWord = wrongGuessCountOfCurrentWord;
+	};
+	
+	WordStore.receiveTotalWordCountResult = function (totalWordCountResult) {
+	  _totalWordCountResult = totalWordCountResult;
+	};
+	
+	WordStore.receiveCorrectWordCount = function (correctWordCount) {
+	  _correctWordCount = correctWordCount;
+	};
+	
+	WordStore.receiveTotalWrongGuessCount = function (totalWrongGuessCount) {
+	  _totalWrongGuessCount = totalWrongGuessCount;
+	};
+	
+	WordStore.receiveScore = function (score) {
+	  _score = score;
+	};
+	
+	module.exports = WordStore;
 
 /***/ }
 /******/ ]);

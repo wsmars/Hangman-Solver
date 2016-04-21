@@ -23,8 +23,48 @@ var WordActions = {
     });
   },
 
+  receiveTotalWordCountResult: function(totalWordCountResult) {
+    AppDispatcher.dispatch({
+      actionType: 'RECEIVE_TOTAL_WORD_COUNT_RESULT',
+      totalWordCountResult: totalWordCountResult
+    });
+  },
+
+  receiveCorrectWordCount: function(correctWordCount) {
+    AppDispatcher.dispatch({
+      actionType: 'RECEIVE_CORRECT_WORD_COUNT',
+      correctWordCount: correctWordCount
+    });
+  },
+
+  receiveTotalWrongGuessCount: function(totalWrongGuessCount) {
+    AppDispatcher.dispatch({
+      actionType: 'RECEIVE_TOTAL_WRONG_GUESS_COUNT',
+      totalWrongGuessCount: totalWrongGuessCount
+    });
+  },
+
+  receiveScore: function(score) {
+    AppDispatcher.dispatch({
+      actionType: 'RECEIVE_SCORE',
+      score: score
+    });
+  },
+
   fetchWord: function(session) {
     ApiUtil.fetchWord(session, this.receiveWord, this.receiveTotalWordCount, this.receiveWrongGuessCountOfCurrentWord);
+  },
+
+  guessWord: function(session, letter) {
+    ApiUtil.guessWord(session, letter, this.receiveWord, this.receiveTotalWordCount, this.receiveWrongGuessCountOfCurrentWord);
+  },
+
+  fetchResult: function(session) {
+    ApiUtil.fetchResult(session, this.receiveTotalWordCountResult, this.receiveCorrectWordCount, this.receiveTotalWrongGuessCount, this.receiveScore);
+  },
+
+  gameSubmit: function(session) {
+    ApiUtil.gameSubmit(session);
   }
 }
 

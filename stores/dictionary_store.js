@@ -3,6 +3,8 @@ var AppDispatcher = require('../dispatcher/dispatcher');
 var DictionaryStore = new Store(AppDispatcher);
 var _dictionary = {};
 var _possibleWords = [];
+var _suggestLetters = [];
+var _exist = [];
 
 DictionaryStore.__onDispatch = function (payload) {
 switch(payload.actionType) {
@@ -10,22 +12,36 @@ switch(payload.actionType) {
     this.recieveDictionary(payload.dictionary);
     DictionaryStore.__emitChange();
     break;
+  case "RECEIVE_WORDS_LENGTH":
+    this.filterDictionaryByLength(payload.length);
+    DictionaryStore.__emitChange();
+    break;
+  case "RECEIVE_GUESSED_LETTER":
+    this.filterDictionaryByLetter(payload.letter);
+    DictionaryStore.__emitChange();
+    break;
+  case "RECEIVE_PATTERN":
+    this.filterWordsByPattern(payload.pattern);
+    DictionaryStore.__emitChange();
+    break;
   }
 };
 
 DictionaryStore.all = function () {
-  return _dictionary;
+  return [_possibleWords, _suggestLetters];
 };
 
 DictionaryStore.recieveDictionary = function (dictionary) {
   _dictionary = dictionary;
 };
 
-DictionaryStore.filterWordsByLength = function (length) {
-  return _possibleWords = _dictionary[length];
+DictionaryStore.filterDictionaryByLength = function (length) {
+  _possibleWords = _dictionary[length];
+  _exist = [];
+  this.findMostCommonLetter();
 };
 
-DictionaryStore.filterWordsByLetter = function (letter) {
+DictionaryStore.filterDictionaryByLetter = function (letter) {
   var result = [];
   for (var i = 0; i < _possibleWords.length; i++) {
     if (!_possibleWords[i].includes(letter)) {
@@ -33,14 +49,29 @@ DictionaryStore.filterWordsByLetter = function (letter) {
     }
   }
   _possibleWords = result;
+  this.findMostCommonLetter();
 };
 
-DictionaryStore.filterWordsByPattern = function (word) {
+DictionaryStore.filterWordsByPattern = function (pattern) {
   var result = [];
+  for (var n = 0; n < pattern.length; n++) {
+    if (pattern != "*" && !_exist.includes(pattern[n])) {
+      _exist.push(pattern[n]);
+    }
+  }
 
   var samePattern = function (word1, word2) { // word1 = "abc", word2 = "*bc"
+    var exist = [];
+    for (var k = 0; k < word2.length; k++) {
+      if (word2[k] != "*") {
+        exist.push(word2[k]);
+      }
+    }
     for (var i = 0; i < word1.length; i++) {
       if ((word2[i] != word1[i]) && (word2[i] != "*")) {
+        return false;
+      }
+      else if ((word2[i] === "*") && exist.includes(word1[i])) {
         return false;
       }
     }
@@ -48,36 +79,29 @@ DictionaryStore.filterWordsByPattern = function (word) {
   };
 
   for (var j = 0; j < _possibleWords.length; j++) {
-    if (samePattern(_possibleWords[j], word)) {
+    if (samePattern(_possibleWords[j], pattern)) {
       result.push(_possibleWords[j]);
     }
   }
-
   _possibleWords = result;
+  this.findMostCommonLetter();
 };
 
-DictionaryStore.findMostCommonLetter = function (possibleWords, existLetter) {
-  var obj = {}
-  var l = possibleWords[0].length; //all possibleWords are same length
-  var currentCount = 1;
-  var result = "";
+DictionaryStore.findMostCommonLetter = function () {
+  var result = {};
 
-  for (var i = 0; i < possibleWords.length; i++) {
-    for (var j = 0; j < l; j++) {
-      if (obj[possibleWords[i][j]]) {
-        obj[possibleWords[i][j]] ++;
-        if (currentCount < obj[possibleWords[i][j]] && !existLetter.includes(possibleWords[i][j])) {
-          currentCount = obj[possibleWords[i][j]];
-          result = possibleWords[i][j];
-        }
+  for (var i = 0; i < _possibleWords.length; i++) {
+    for (var j = 0; j < _possibleWords[i].length; j++) {
+      if (!_exist.includes(_possibleWords[i][j]) && result[_possibleWords[i][j]]) {
+        result[_possibleWords[i][j]] += 1;
       }
-      else {
-        obj[possibleWords[i][j]] = 1;
+      else if (!_exist.includes(_possibleWords[i][j])) {
+        result[_possibleWords[i][j]] = 1;
       }
     }
   }
 
-  return result.toUpperCase();
+  return _suggestLetters = result;
 };
 
 module.exports = DictionaryStore;

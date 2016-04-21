@@ -65,8 +65,8 @@
 	    return {
 	      session: '',
 	      email: 'mszhang0220@gmail.com',
-	      dictionary: {},
 	      possibleWords: [],
+	      suggestLetters: {},
 	      existLetter: [],
 	      guessWord: [],
 	      guessLetter: "",
@@ -79,7 +79,10 @@
 	  },
 	
 	  updateDictionary: function () {
-	    this.setState({ dictionary: DictionaryStore.all() });
+	    var newDictionary = DictionaryStore.all();
+	    this.setState({ possibleWords: newDictionary[0] });
+	    this.setState({ suggestLetters: newDictionary[1] });
+	    // debugger;
 	  },
 	
 	  updateWord: function () {
@@ -89,8 +92,8 @@
 	
 	  componentDidMount: function () {
 	    this.token1 = SessionStore.addListener(this.updateSession);
-	    this.token2 = DictionaryStore.addListener(this.updateDictionary);
-	    this.token3 = WordStore.addListener(this.updateWord);
+	    this.token2 = WordStore.addListener(this.updateWord);
+	    this.token3 = DictionaryStore.addListener(this.updateDictionary);
 	  },
 	
 	  componentWillUnmount: function () {
@@ -107,12 +110,18 @@
 	
 	  clickGetAWord: function (e) {
 	    e.preventDefault();
+	    this.setState({ existLetter: [] });
 	    WordActions.fetchWord(this.state.session);
 	  },
 	
 	  clickGuess: function (e) {
 	    e.preventDefault();
-	    WordActions.guessWord(this.state.session, this.state.guessLetter);
+	    if (this.state.existLetter.includes(this.state.guessLetter)) {
+	      alert("This letter has been guessed!");
+	    } else {
+	      this.state.existLetter.push(this.state.guessLetter);
+	      WordActions.guessWord(this.state.session, this.state.guessLetter, this.state.guessWord[2]);
+	    }
 	  },
 	
 	  clickResult: function (e) {
@@ -123,6 +132,38 @@
 	  clickSubmit: function (e) {
 	    e.preventDefault();
 	    WordActions.gameSubmit(this.state.session);
+	  },
+	
+	  mostCommonLetter: function (obj) {
+	    var keys = Object.keys(obj);
+	    var largest = 0;
+	    var result = "";
+	
+	    for (var i = 0; i < keys.length; i++) {
+	      if (obj[keys[i]] > largest) {
+	        result = keys[i];
+	        largest = obj[keys[i]];
+	      }
+	    }
+	    return result.toUpperCase();
+	  },
+	
+	  renderSuggestLetters: function () {
+	    var suggest = this.state.suggestLetters;
+	    var letters = Object.keys(suggest);
+	    var result = [];
+	    if (letters.length < 1) {
+	      return null;
+	    } else {
+	      for (var i = 0; i < letters.length; i++) {
+	        result.push(letters[i].toUpperCase() + "(" + suggest[letters[i]] + ")" + "," + " ");
+	      }
+	      return React.createElement(
+	        'div',
+	        null,
+	        result
+	      );
+	    }
 	  },
 	
 	  render: function () {
@@ -175,6 +216,18 @@
 	        null,
 	        'Possible Words Count: ',
 	        this.state.possibleWords.length
+	      ),
+	      React.createElement(
+	        'h2',
+	        null,
+	        'Suggest Words: ',
+	        this.renderSuggestLetters()
+	      ),
+	      React.createElement(
+	        'h2',
+	        null,
+	        'Most Common Words: ',
+	        this.mostCommonLetter(this.state.suggestLetters)
 	      ),
 	      React.createElement(
 	        'h2',
@@ -20802,7 +20855,7 @@
 	    });
 	  },
 	
-	  fetchWord: function (session, receiveWord, receiveTotalWordCount, receiveWrongGuessCountOfCurrentWord) {
+	  fetchWord: function (session, receiveWord, receiveWordLength, receiveTotalWordCount, receiveWrongGuessCountOfCurrentWord) {
 	    $.ajax({
 	      url: 'https://strikingly-hangman.herokuapp.com/game/on',
 	      type: 'POST',
@@ -20814,6 +20867,8 @@
 	      success: function (response) {
 	        console.log(response.data);
 	        receiveWord(response.data.word);
+	        console.log(response.data.word.length);
+	        receiveWordLength(response.data.word.length);
 	        receiveTotalWordCount(response.data.totalWordCount);
 	        receiveWrongGuessCountOfCurrentWord(response.data.wrongGuessCountOfCurrentWord);
 	      },
@@ -20823,7 +20878,7 @@
 	    });
 	  },
 	
-	  guessWord: function (session, letter, receiveWord, receiveTotalWordCount, receiveWrongGuessCountOfCurrentWord) {
+	  guessWord: function (session, letter, wrongGuessCount, receivePattern, receiveGuessedLetter, receiveWord, receiveTotalWordCount, receiveWrongGuessCountOfCurrentWord) {
 	    $.ajax({
 	      url: 'https://strikingly-hangman.herokuapp.com/game/on',
 	      type: 'POST',
@@ -20837,6 +20892,11 @@
 	        receiveWord(response.data.word);
 	        receiveTotalWordCount(response.data.totalWordCount);
 	        receiveWrongGuessCountOfCurrentWord(response.data.wrongGuessCountOfCurrentWord);
+	        if (response.data.wrongGuessCountOfCurrentWord === wrongGuessCount) {
+	          receivePattern(response.data.word.toLowerCase());
+	        } else {
+	          receiveGuessedLetter(letter.toLowerCase());
+	        }
 	      },
 	      error: function (response) {
 	        console.log(response);
@@ -20938,6 +20998,27 @@
 	    });
 	  },
 	
+	  receiveWordLength: function (length) {
+	    AppDispatcher.dispatch({
+	      actionType: 'RECEIVE_WORDS_LENGTH',
+	      length: length
+	    });
+	  },
+	
+	  receiveGuessedLetter: function (letter) {
+	    AppDispatcher.dispatch({
+	      actionType: 'RECEIVE_GUESSED_LETTER',
+	      letter: letter
+	    });
+	  },
+	
+	  receivePattern: function (pattern) {
+	    AppDispatcher.dispatch({
+	      actionType: 'RECEIVE_PATTERN',
+	      pattern: pattern
+	    });
+	  },
+	
 	  receiveTotalWordCount: function (totalWordCount) {
 	    AppDispatcher.dispatch({
 	      actionType: 'RECEIVE_TOTAL_WORD_COUNT',
@@ -20981,11 +21062,11 @@
 	  },
 	
 	  fetchWord: function (session) {
-	    ApiUtil.fetchWord(session, this.receiveWord, this.receiveTotalWordCount, this.receiveWrongGuessCountOfCurrentWord);
+	    ApiUtil.fetchWord(session, this.receiveWord, this.receiveWordLength, this.receiveTotalWordCount, this.receiveWrongGuessCountOfCurrentWord);
 	  },
 	
-	  guessWord: function (session, letter) {
-	    ApiUtil.guessWord(session, letter, this.receiveWord, this.receiveTotalWordCount, this.receiveWrongGuessCountOfCurrentWord);
+	  guessWord: function (session, letter, wrongGuessCount) {
+	    ApiUtil.guessWord(session, letter, wrongGuessCount, this.receivePattern, this.receiveGuessedLetter, this.receiveWord, this.receiveTotalWordCount, this.receiveWrongGuessCountOfCurrentWord);
 	  },
 	
 	  fetchResult: function (session) {
@@ -27479,6 +27560,8 @@
 	var DictionaryStore = new Store(AppDispatcher);
 	var _dictionary = {};
 	var _possibleWords = [];
+	var _suggestLetters = [];
+	var _exist = [];
 	
 	DictionaryStore.__onDispatch = function (payload) {
 	  switch (payload.actionType) {
@@ -27486,22 +27569,36 @@
 	      this.recieveDictionary(payload.dictionary);
 	      DictionaryStore.__emitChange();
 	      break;
+	    case "RECEIVE_WORDS_LENGTH":
+	      this.filterDictionaryByLength(payload.length);
+	      DictionaryStore.__emitChange();
+	      break;
+	    case "RECEIVE_GUESSED_LETTER":
+	      this.filterDictionaryByLetter(payload.letter);
+	      DictionaryStore.__emitChange();
+	      break;
+	    case "RECEIVE_PATTERN":
+	      this.filterWordsByPattern(payload.pattern);
+	      DictionaryStore.__emitChange();
+	      break;
 	  }
 	};
 	
 	DictionaryStore.all = function () {
-	  return _dictionary;
+	  return [_possibleWords, _suggestLetters];
 	};
 	
 	DictionaryStore.recieveDictionary = function (dictionary) {
 	  _dictionary = dictionary;
 	};
 	
-	DictionaryStore.filterWordsByLength = function (length) {
-	  return _possibleWords = _dictionary[length];
+	DictionaryStore.filterDictionaryByLength = function (length) {
+	  _possibleWords = _dictionary[length];
+	  _exist = [];
+	  this.findMostCommonLetter();
 	};
 	
-	DictionaryStore.filterWordsByLetter = function (letter) {
+	DictionaryStore.filterDictionaryByLetter = function (letter) {
 	  var result = [];
 	  for (var i = 0; i < _possibleWords.length; i++) {
 	    if (!_possibleWords[i].includes(letter)) {
@@ -27509,15 +27606,29 @@
 	    }
 	  }
 	  _possibleWords = result;
+	  this.findMostCommonLetter();
 	};
 	
-	DictionaryStore.filterWordsByPattern = function (word) {
+	DictionaryStore.filterWordsByPattern = function (pattern) {
 	  var result = [];
+	  for (var n = 0; n < pattern.length; n++) {
+	    if (pattern != "*" && !_exist.includes(pattern[n])) {
+	      _exist.push(pattern[n]);
+	    }
+	  }
 	
 	  var samePattern = function (word1, word2) {
 	    // word1 = "abc", word2 = "*bc"
+	    var exist = [];
+	    for (var k = 0; k < word2.length; k++) {
+	      if (word2[k] != "*") {
+	        exist.push(word2[k]);
+	      }
+	    }
 	    for (var i = 0; i < word1.length; i++) {
 	      if (word2[i] != word1[i] && word2[i] != "*") {
+	        return false;
+	      } else if (word2[i] === "*" && exist.includes(word1[i])) {
 	        return false;
 	      }
 	    }
@@ -27525,35 +27636,28 @@
 	  };
 	
 	  for (var j = 0; j < _possibleWords.length; j++) {
-	    if (samePattern(_possibleWords[j], word)) {
+	    if (samePattern(_possibleWords[j], pattern)) {
 	      result.push(_possibleWords[j]);
 	    }
 	  }
-	
 	  _possibleWords = result;
+	  this.findMostCommonLetter();
 	};
 	
-	DictionaryStore.findMostCommonLetter = function (possibleWords, existLetter) {
-	  var obj = {};
-	  var l = possibleWords[0].length; //all possibleWords are same length
-	  var currentCount = 1;
-	  var result = "";
+	DictionaryStore.findMostCommonLetter = function () {
+	  var result = {};
 	
-	  for (var i = 0; i < possibleWords.length; i++) {
-	    for (var j = 0; j < l; j++) {
-	      if (obj[possibleWords[i][j]]) {
-	        obj[possibleWords[i][j]]++;
-	        if (currentCount < obj[possibleWords[i][j]] && !existLetter.includes(possibleWords[i][j])) {
-	          currentCount = obj[possibleWords[i][j]];
-	          result = possibleWords[i][j];
-	        }
-	      } else {
-	        obj[possibleWords[i][j]] = 1;
+	  for (var i = 0; i < _possibleWords.length; i++) {
+	    for (var j = 0; j < _possibleWords[i].length; j++) {
+	      if (!_exist.includes(_possibleWords[i][j]) && result[_possibleWords[i][j]]) {
+	        result[_possibleWords[i][j]] += 1;
+	      } else if (!_exist.includes(_possibleWords[i][j])) {
+	        result[_possibleWords[i][j]] = 1;
 	      }
 	    }
 	  }
 	
-	  return result.toUpperCase();
+	  return _suggestLetters = result;
 	};
 	
 	module.exports = DictionaryStore;

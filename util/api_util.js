@@ -29,7 +29,7 @@ var ApiUtil = {
     })
   },
 
-  fetchWord: function(session, receiveWord, receiveTotalWordCount, receiveWrongGuessCountOfCurrentWord) {
+  fetchWord: function(session, receiveWord, receiveWordLength, receiveTotalWordCount, receiveWrongGuessCountOfCurrentWord) {
     $.ajax ({
       url: 'https://strikingly-hangman.herokuapp.com/game/on',
       type: 'POST',
@@ -41,6 +41,8 @@ var ApiUtil = {
       success: function(response) {
         console.log(response.data);
         receiveWord(response.data.word);
+        console.log(response.data.word.length);
+        receiveWordLength(response.data.word.length);
         receiveTotalWordCount(response.data.totalWordCount);
         receiveWrongGuessCountOfCurrentWord(response.data.wrongGuessCountOfCurrentWord);
       },
@@ -51,7 +53,7 @@ var ApiUtil = {
   },
 
 
-  guessWord: function(session, letter, receiveWord, receiveTotalWordCount, receiveWrongGuessCountOfCurrentWord) {
+  guessWord: function(session, letter, wrongGuessCount, receivePattern, receiveGuessedLetter, receiveWord, receiveTotalWordCount, receiveWrongGuessCountOfCurrentWord) {
     $.ajax ({
       url: 'https://strikingly-hangman.herokuapp.com/game/on',
       type: 'POST',
@@ -65,6 +67,12 @@ var ApiUtil = {
         receiveWord(response.data.word);
         receiveTotalWordCount(response.data.totalWordCount);
         receiveWrongGuessCountOfCurrentWord(response.data.wrongGuessCountOfCurrentWord);
+        if (response.data.wrongGuessCountOfCurrentWord === wrongGuessCount) {
+          receivePattern(response.data.word.toLowerCase());
+        }
+        else {
+          receiveGuessedLetter(letter.toLowerCase());
+        }
       },
       error: function(response) {
         console.log(response)

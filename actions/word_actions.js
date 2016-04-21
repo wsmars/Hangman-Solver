@@ -9,6 +9,27 @@ var WordActions = {
     });
   },
 
+  receiveWordLength: function(length){
+    AppDispatcher.dispatch({
+      actionType: 'RECEIVE_WORDS_LENGTH',
+      length: length
+    });
+  },
+
+  receiveGuessedLetter: function(letter){
+    AppDispatcher.dispatch({
+      actionType: 'RECEIVE_GUESSED_LETTER',
+      letter: letter
+    });
+  },
+
+  receivePattern: function(pattern){
+    AppDispatcher.dispatch({
+      actionType: 'RECEIVE_PATTERN',
+      pattern: pattern
+    });
+  },
+
   receiveTotalWordCount: function(totalWordCount) {
     AppDispatcher.dispatch({
       actionType: 'RECEIVE_TOTAL_WORD_COUNT',
@@ -52,11 +73,11 @@ var WordActions = {
   },
 
   fetchWord: function(session) {
-    ApiUtil.fetchWord(session, this.receiveWord, this.receiveTotalWordCount, this.receiveWrongGuessCountOfCurrentWord);
+    ApiUtil.fetchWord(session, this.receiveWord, this.receiveWordLength, this.receiveTotalWordCount, this.receiveWrongGuessCountOfCurrentWord);
   },
 
-  guessWord: function(session, letter) {
-    ApiUtil.guessWord(session, letter, this.receiveWord, this.receiveTotalWordCount, this.receiveWrongGuessCountOfCurrentWord);
+  guessWord: function(session, letter, wrongGuessCount) {
+    ApiUtil.guessWord(session, letter, wrongGuessCount, this.receivePattern, this.receiveGuessedLetter, this.receiveWord, this.receiveTotalWordCount, this.receiveWrongGuessCountOfCurrentWord);
   },
 
   fetchResult: function(session) {

@@ -17,8 +17,8 @@ var MyComponent = React.createClass({
     return {
             session: '',
             email: 'mszhang0220@gmail.com',
-            dictionary: {},
             possibleWords: [],
+            suggestLetters: {},
             existLetter: [],
             guessWord: [],
             guessLetter: "",
@@ -31,7 +31,10 @@ var MyComponent = React.createClass({
   },
 
   updateDictionary: function() {
-    this.setState({dictionary: DictionaryStore.all()});
+    var newDictionary = DictionaryStore.all()
+    this.setState({possibleWords: newDictionary[0]});
+    this.setState({suggestLetters: newDictionary[1]});
+    // debugger;
   },
 
   updateWord: function() {
@@ -41,8 +44,8 @@ var MyComponent = React.createClass({
 
   componentDidMount: function() {
     this.token1 = SessionStore.addListener(this.updateSession);
-    this.token2 = DictionaryStore.addListener(this.updateDictionary);
-    this.token3 = WordStore.addListener(this.updateWord);
+    this.token2 = WordStore.addListener(this.updateWord);
+    this.token3 = DictionaryStore.addListener(this.updateDictionary);
   },
 
   componentWillUnmount: function() {
@@ -59,12 +62,19 @@ var MyComponent = React.createClass({
 
   clickGetAWord: function (e) {
     e.preventDefault();
+    this.setState({existLetter: []});
     WordActions.fetchWord(this.state.session);
   },
 
   clickGuess: function (e) {
     e.preventDefault();
-    WordActions.guessWord(this.state.session, this.state.guessLetter);
+    if (this.state.existLetter.includes(this.state.guessLetter)) {
+      alert("This letter has been guessed!")
+    }
+    else {
+      this.state.existLetter.push(this.state.guessLetter);
+      WordActions.guessWord(this.state.session, this.state.guessLetter, this.state.guessWord[2]);
+    }
   },
 
   clickResult: function (e) {
@@ -75,6 +85,37 @@ var MyComponent = React.createClass({
   clickSubmit: function (e) {
     e.preventDefault();
     WordActions.gameSubmit(this.state.session);
+  },
+
+  mostCommonLetter: function (obj) {
+    var keys = Object.keys(obj);
+    var largest = 0;
+    var result = "";
+
+    for (var i = 0; i < keys.length; i++) {
+      if (obj[keys[i]] > largest) {
+        result = keys[i];
+        largest = obj[keys[i]];
+      }
+    }
+    return result.toUpperCase();
+  },
+
+  renderSuggestLetters: function() {
+    var suggest = this.state.suggestLetters;
+    var letters = Object.keys(suggest);
+    var result = [];
+    if (letters.length < 1) {
+      return null;
+    }
+    else {
+      for (var i = 0; i < letters.length; i++) {
+        result.push(letters[i].toUpperCase() + "(" + suggest[letters[i]] + ")" + "," + " ")
+      }
+      return (
+        <div>{result}</div>
+      )
+    }
   },
 
   render: function () {
@@ -90,6 +131,8 @@ var MyComponent = React.createClass({
         <h2>Total Word Count: {this.state.guessWord[1]}</h2>
         <h2>Wrong Guess Count of Current Word: {this.state.guessWord[2]}</h2>
         <h2>Possible Words Count: {this.state.possibleWords.length}</h2>
+        <h2>Suggest Words: {this.renderSuggestLetters()}</h2>
+        <h2>Most Common Words: {this.mostCommonLetter(this.state.suggestLetters)}</h2>
 
         <h2>----------------------------------------------</h2>
         <input placeholder="Guess A letter" type="text" valueLink={this.linkState('guessLetter')}/>

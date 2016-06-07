@@ -4,9 +4,7 @@
 
 [live-demo]: http://wsmars.github.io/Hangman-Solver/
 
-The application is a program that guesses the words automatically through a RESTful API provided by a Hangman game server.
-
-The following command can start the game in terminal.
+The application is a program that guesses the words through a RESTful API provided by a Hangman game server.
 
 ## How to play
 - Click "Start" to get a session and start the game.
